@@ -8,7 +8,7 @@ using namespace std;
 Plotter::Plotter(QWidget *parent)
     : QWidget(parent)
 {
-    setBackgroundRole(QPalette::Dark);
+    setBackgroundRole(QPalette::Light);
     setAutoFillBackground(true);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setFocusPolicy(Qt::StrongFocus);
@@ -234,17 +234,17 @@ void Plotter::drawGrid(QPainter *painter)
         return;
 
     PlotSettings settings = zoomStack[curZoom];
-    QPen quiteDark = palette().dark().color().light();
-    QPen light = palette().light().color();
+//    QPen quiteDark = palette().dark().color().light();
+    QPen dark = palette().dark().color();
 
     for (int i = 0; i <= settings.numXTicks; ++i) {
         int x = rect.left() + (i * (rect.width() - 1)
                                  / settings.numXTicks);
         double label = settings.minX + (i * settings.spanX()
                                           / settings.numXTicks);
-        painter->setPen(quiteDark);
+        painter->setPen(dark);
         painter->drawLine(x, rect.top(), x, rect.bottom());
-        painter->setPen(light);
+        painter->setPen(dark);
         painter->drawLine(x, rect.bottom(), x, rect.bottom() + 5);
         painter->drawText(x - 50, rect.bottom() + 5, 100, 15,
                           Qt::AlignHCenter | Qt::AlignTop,
@@ -255,9 +255,9 @@ void Plotter::drawGrid(QPainter *painter)
                                    / settings.numYTicks);
         double label = settings.minY + (j * settings.spanY()
                                           / settings.numYTicks);
-        painter->setPen(quiteDark);
+        painter->setPen(dark);
         painter->drawLine(rect.left(), y, rect.right(), y);
-        painter->setPen(light);
+        painter->setPen(dark);
         painter->drawLine(rect.left() - 5, y, rect.left(), y);
         painter->drawText(rect.left() - Margin, y - 10, Margin - 5, 20,
                           Qt::AlignRight | Qt::AlignVCenter,
