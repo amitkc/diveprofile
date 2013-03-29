@@ -250,6 +250,7 @@ void Plotter::drawGrid(QPainter *painter)
                           Qt::AlignHCenter | Qt::AlignTop,
                           QString::number(label));
     }
+    painter->drawText(width() - 75,  height() - 10,QString("Minutes"));
     for (int j = 0; j <= settings.numYTicks; ++j) {
         int y = rect.bottom() - (j * (rect.height() - 1)
                                    / settings.numYTicks);
@@ -264,6 +265,7 @@ void Plotter::drawGrid(QPainter *painter)
                           QString::number(label));
     }
     painter->drawRect(rect.adjusted(0, 0, -1, -1));
+    painter->drawText(25,25,QString("Metres"));
 }
 
 void Plotter::drawCurves(QPainter *painter)
