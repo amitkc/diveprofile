@@ -87,7 +87,7 @@ void Plotter::paintEvent(QPaintEvent * /* event */)
     painter.drawPixmap(0, 0, pixmap);
 
     if (rubberBandIsShown) {
-        painter.setPen(palette().light().color());
+        painter.setPen(palette().dark().color());
         painter.drawRect(rubberBandRect.normalized()
                                        .adjusted(0, 0, -1, -1));
     }
