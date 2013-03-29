@@ -304,12 +304,12 @@ void Plotter::drawCurves(QPainter *painter)
 PlotSettings::PlotSettings()
 {
     minX = 0.0;
-    maxX = 10.0;
-    numXTicks = 5;
+    maxX = 120.0;
+    numXTicks = 6;
 
-    minY = 0.0;
-    maxY = 10.0;
-    numYTicks = 5;
+    minY = 35.0;
+    maxY = 0.0;
+    numYTicks = 7;
 }
 
 void PlotSettings::scroll(int dx, int dy)
