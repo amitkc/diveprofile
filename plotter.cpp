@@ -154,7 +154,20 @@ void Plotter::mouseReleaseEvent(QMouseEvent *event)
         settings.maxX = prevSettings.minX + dx * rect.right();
         settings.minY = prevSettings.maxY - dy * rect.bottom();
         settings.maxY = prevSettings.maxY - dy * rect.top();
+
+        qDebug() << "before adjustment...settings: "
+                 << settings.minX << " "
+                 << settings.maxX << " "
+                 << settings.minY << " "
+                 << settings.maxY;
+
         settings.adjust();
+
+        qDebug() << "after adjustment...settings: "
+                 << settings.minX << " "
+                 << settings.maxX << " "
+                 << settings.minY << " "
+                 << settings.maxY;
 
         zoomStack.resize(curZoom + 1);
         zoomStack.append(settings);
@@ -216,6 +229,9 @@ void Plotter::updateRubberBandRegion()
 
 void Plotter::refreshPixmap()
 {
+
+    qDebug() << "refreshPixmap()";
+
     pixmap = QPixmap(size());
     pixmap.fill(this, 0, 0);
 
@@ -228,6 +244,8 @@ void Plotter::refreshPixmap()
 
 void Plotter::drawGrid(QPainter *painter)
 {
+    qDebug() << "drawGrid";
+
     QRect rect(Margin, Margin,
                width() - 2 * Margin, height() - 2 * Margin);
     if (!rect.isValid())
@@ -256,6 +274,9 @@ void Plotter::drawGrid(QPainter *painter)
                                    / settings.numYTicks);
         double label = settings.minY + (j * settings.spanY()
                                           / settings.numYTicks);
+        qDebug() << "label: " << label
+                 << " spanY() " << settings.spanY()
+                 << "num Y ticks" << settings.numYTicks;
         painter->setPen(dark);
         painter->drawLine(rect.left(), y, rect.right(), y);
         painter->setPen(dark);
@@ -273,6 +294,7 @@ void Plotter::drawCurves(QPainter *painter)
     static const QColor colorForIds[6] = {
         Qt::red, Qt::green, Qt::blue, Qt::cyan, Qt::magenta, Qt::yellow
     };
+    qDebug() << "drawCurves";
     PlotSettings settings = zoomStack[curZoom];
     QRect rect(Margin, Margin,
                width() - 2 * Margin, height() - 2 * Margin);
@@ -334,6 +356,13 @@ void PlotSettings::adjust()
 void PlotSettings::adjustAxis(double &min, double &max,
                               int &numTicks)
 {
+    qDebug() << "adJustAxis()" << min << ":" << max << ":" << numTicks;
+
+    bool swapped = false;
+    if (min > max) {
+        qSwap(max,min);
+        swapped = true;
+    }
     const int MinTicks = 4;
     double grossStep = (max - min) / MinTicks;
     double step = pow(10.0, floor(log10(grossStep)));
@@ -349,4 +378,9 @@ void PlotSettings::adjustAxis(double &min, double &max,
         numTicks = MinTicks;
     min = floor(min / step) * step;
     max = ceil(max / step) * step;
+
+    if (swapped){
+        qSwap(min,max);
+    }
+
 }
