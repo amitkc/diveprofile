@@ -40,6 +40,9 @@ private:
     void refreshPixmap();
     void drawGrid(QPainter *painter);
     void drawCurves(QPainter *painter);
+    void drawSegments(QPainter *painter);
+    void drawClosedCurves(QPainter *painter);
+    QColor colourForGrad(double grad);
 
     enum { Margin = 50 };
 

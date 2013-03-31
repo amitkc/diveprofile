@@ -26,6 +26,25 @@ void readDive(Plotter *plotter, const QString &fileName)
     plotter->setCurveData(0, data);
 }
 
+
+/* A dive plot widget prototype to show proof of concept.
+ *
+ * Based on example from GUI Programming with Qt4 (Summerfield/Blanchette).
+ *
+ * We read a dive in from a simple text file and render the dive plot on
+ * a QWidget using basic QPainter operations.  We show the colour of the
+ * depth profile changing with dy/dx, the ability to fill the enclosed area
+ * with a gradient and some simple drawing and text placement.
+ *
+ * Panning and zooming are pretty much unaltered from the example, with the
+ * exception of mods to reverse the direction of the vertical axis to use
+ * a "going down means counting up" convention which makes more sense for
+ * a dive.
+ *
+ * Aim is to show proof of concept to non-Qt programmers working on subsurface.
+ * Question: what if any capabilities are needed that aren't on show here?
+ *
+*/
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);

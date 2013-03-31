@@ -37,6 +37,11 @@ void Plotter::setPlotSettings(const PlotSettings &settings)
     refreshPixmap();
 }
 
+/* Zoom in immediately after starting is a bit clunky.
+ * First use of rubber band creates the stack of details
+ * which trigger in/out with keyboard +/-. This probably
+ * wants changing so they work out of the box from t = 0.
+*/
 void Plotter::zoomOut()
 {
     if (curZoom > 0) {
@@ -154,21 +159,7 @@ void Plotter::mouseReleaseEvent(QMouseEvent *event)
         settings.maxX = prevSettings.minX + dx * rect.right();
         settings.minY = prevSettings.maxY - dy * rect.bottom();
         settings.maxY = prevSettings.maxY - dy * rect.top();
-
-        qDebug() << "before adjustment...settings: "
-                 << settings.minX << " "
-                 << settings.maxX << " "
-                 << settings.minY << " "
-                 << settings.maxY;
-
         settings.adjust();
-
-        qDebug() << "after adjustment...settings: "
-                 << settings.minX << " "
-                 << settings.maxX << " "
-                 << settings.minY << " "
-                 << settings.maxY;
-
         zoomStack.resize(curZoom + 1);
         zoomStack.append(settings);
         zoomIn();
@@ -229,7 +220,6 @@ void Plotter::updateRubberBandRegion()
 
 void Plotter::refreshPixmap()
 {
-
     qDebug() << "refreshPixmap()";
 
     pixmap = QPixmap(size());
@@ -238,7 +228,8 @@ void Plotter::refreshPixmap()
     QPainter painter(&pixmap);
     painter.initFrom(this);
     drawGrid(&painter);
-    drawCurves(&painter);
+    drawClosedCurves(&painter); /* to get filled area effect */
+    drawSegments(&painter);     /* curve segments colour for rate of change */
     update();
 }
 
@@ -252,8 +243,7 @@ void Plotter::drawGrid(QPainter *painter)
         return;
 
     PlotSettings settings = zoomStack[curZoom];
-//    QPen quiteDark = palette().dark().color().light();
-    QPen dark = palette().dark().color();
+    QPen dark = palette().mid().color();
 
     for (int i = 0; i <= settings.numXTicks; ++i) {
         int x = rect.left() + (i * (rect.width() - 1)
@@ -274,9 +264,6 @@ void Plotter::drawGrid(QPainter *painter)
                                    / settings.numYTicks);
         double label = settings.minY + (j * settings.spanY()
                                           / settings.numYTicks);
-        qDebug() << "label: " << label
-                 << " spanY() " << settings.spanY()
-                 << "num Y ticks" << settings.numYTicks;
         painter->setPen(dark);
         painter->drawLine(rect.left(), y, rect.right(), y);
         painter->setPen(dark);
@@ -289,10 +276,15 @@ void Plotter::drawGrid(QPainter *painter)
     painter->drawText(25,25,QString("Metres"));
 }
 
+/* Drawing functions modified from examples which
+ * support > 1 curve an using different colours
+ * for each curve.  Here we only make use of one
+ * for the moment.
+*/
 void Plotter::drawCurves(QPainter *painter)
 {
-    static const QColor colorForIds[6] = {
-        Qt::red, Qt::green, Qt::blue, Qt::cyan, Qt::magenta, Qt::yellow
+    static const QColor colorForIds[3] = {
+        Qt::green, Qt::yellow, Qt::red
     };
     qDebug() << "drawCurves";
     PlotSettings settings = zoomStack[curZoom];
@@ -322,6 +314,112 @@ void Plotter::drawCurves(QPainter *painter)
         }
         painter->setPen(colorForIds[uint(id) % 6]);
         painter->drawPolyline(polyline);
+    }
+}
+
+void Plotter::drawSegments(QPainter *painter)
+{
+    qDebug() << "drawSegments";
+    PlotSettings settings = zoomStack[curZoom];
+    QRect rect(Margin, Margin,
+               width() - 2 * Margin, height() - 2 * Margin);
+    if (!rect.isValid())
+        return;
+
+    painter->setClipRect(rect.adjusted(+1, +1, -1, -1)); //
+    painter->setRenderHint(QPainter::Antialiasing);
+    QColor colour;
+    QPen pen;
+    pen.setWidth(2);
+    QMapIterator<int, QVector<QPointF> > i(curveMap); // curveMap is int, QVector<QPointF>
+    while (i.hasNext()) {
+        i.next();
+
+        const QVector<QPointF> &data = i.value();
+        int count = data.count() - 1;
+        for (int j = 0; j < count; ++j) {
+            /* get the gradient to work out the colour */
+            double dx = data[j+1].x() - data[j].x();
+            double dy = data[j+1].y() - data[j].y();
+            if (dx == 0){ // crude skip
+                continue;
+            }
+            double grad = dy/dx;
+            colour = colourForGrad(grad);
+            pen.setColor(colour);
+            painter->setPen(pen);
+
+            /* work out co-ords for two points */
+            double x = data[j].x() - settings.minX;
+            double y = data[j].y() - settings.minY;
+            double x1 = rect.left() + (x * (rect.width() - 1)
+                                         / settings.spanX());
+            double y1 = rect.bottom() - (y * (rect.height() - 1)
+                                           / settings.spanY());
+            x = data[j+1].x() - settings.minX;
+            y = data[j+1].y() - settings.minY;
+            double x2 = rect.left() + (x * (rect.width() - 1)
+                                         / settings.spanX());
+            double y2 = rect.bottom() - (y * (rect.height() - 1)
+                                           / settings.spanY());
+
+            QPointF p1(x1,y1);
+            QPointF p2(x2, y2);
+            painter->drawLine(p1,p2);
+        }
+    }
+}
+
+void Plotter::drawClosedCurves(QPainter *painter)
+{
+    static const QColor colorForIds[3] = {
+        Qt::green, Qt::yellow, Qt::red
+    };
+    qDebug() << "drawClosedCurves";
+    PlotSettings settings = zoomStack[curZoom];
+    QRect rect(Margin, Margin,
+               width() - 2 * Margin, height() - 2 * Margin);
+    if (!rect.isValid())
+        return;
+
+    painter->setClipRect(rect.adjusted(+1, +1, -1, -1));
+
+    QMapIterator<int, QVector<QPointF> > i(curveMap);
+    while (i.hasNext()) {
+        i.next();
+
+        int id = i.key();
+        const QVector<QPointF> &data = i.value();
+        QPolygonF polyline(data.count());
+
+        for (int j = 0; j < data.count(); ++j) {
+            double dx = data[j].x() - settings.minX;
+            double dy = data[j].y() - settings.minY;
+            double x = rect.left() + (dx * (rect.width() - 1)
+                                         / settings.spanX());
+            double y = rect.bottom() - (dy * (rect.height() - 1)
+                                           / settings.spanY());
+            polyline[j] = QPointF(x, y);
+        }
+        painter->setPen(colorForIds[uint(id) % 6]);
+        QLinearGradient fillgradient(QPointF(0,0),QPointF(300,300));
+        fillgradient.setColorAt(0,Qt::white);
+        fillgradient.setColorAt(1,Qt::gray);
+        painter->setBrush(fillgradient);
+        painter->drawPolygon(polyline);
+    }
+}
+
+/* no attempt at realistic rates/colours yet */
+QColor Plotter::colourForGrad(double grad)
+{
+    double absGrad = qAbs(grad);
+    if ( absGrad < 2.5 ){
+        return Qt::green;
+    } else if ( absGrad >= 2.5 && absGrad < 6.0 ){
+        return Qt::yellow;
+    } else {
+        return Qt::red;
     }
 }
 
